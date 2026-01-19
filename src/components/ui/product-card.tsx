@@ -16,6 +16,7 @@ export interface Product {
     originalPrice?: number;
     image: string;
     isNew?: boolean;
+    category?: string;
 }
 
 interface ProductCardProps {
