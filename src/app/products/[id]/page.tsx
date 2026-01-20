@@ -4,8 +4,10 @@ import { getProductById, toDisplayProduct } from "@/lib/products";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Star } from "lucide-react";
 import { ProductDetailActions } from "./ProductDetailActions";
+import { ProductRatingsList } from "@/components/products/ProductRatingsList";
+import { cn } from "@/lib/utils";
 
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -46,10 +48,28 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                         <h2 className="text-accent font-bold uppercase tracking-widest text-xs md:text-sm mb-2">{product.brand}</h2>
                         <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-heading text-white uppercase italic mb-4">{product.name}</h1>
 
-                        <div className="flex flex-wrap items-center gap-2 md:gap-4 mb-6">
-                            <span className="text-2xl md:text-3xl font-numeric font-bold text-white">Rp {product.price.toLocaleString('id-ID')}</span>
+                        <div className="flex flex-wrap items-center gap-4 md:gap-6 mb-6">
+                            <span className="text-3xl md:text-4xl font-numeric font-bold text-white">Rp {product.price.toLocaleString('id-ID')}</span>
                             {product.originalPrice && (
-                                <span className="text-lg md:text-xl font-numeric text-text-secondary line-through">Rp {product.originalPrice.toLocaleString('id-ID')}</span>
+                                <span className="text-xl md:text-2xl font-numeric text-text-secondary line-through">Rp {product.originalPrice.toLocaleString('id-ID')}</span>
+                            )}
+
+                            {product.ratingCount > 0 && (
+                                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/10 ml-auto md:ml-0">
+                                    <div className="flex">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                            <Star
+                                                key={star}
+                                                className={cn(
+                                                    "h-4 w-4",
+                                                    product.ratingAverage >= star ? "text-yellow-400 fill-yellow-400" : "text-white/10"
+                                                )}
+                                            />
+                                        ))}
+                                    </div>
+                                    <span className="text-white font-bold text-sm">{product.ratingAverage}</span>
+                                    <span className="text-text-secondary text-xs">({product.ratingCount})</span>
+                                </div>
                             )}
                         </div>
 
@@ -69,6 +89,9 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                         <ProductDetailActions product={product} />
                     </div>
                 </div>
+
+                {/* Ratings Section */}
+                <ProductRatingsList productId={product.id} />
             </div>
 
             <Footer />

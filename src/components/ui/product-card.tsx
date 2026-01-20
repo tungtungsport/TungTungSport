@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import NextImage from "next/image";
-import { ShoppingCart, Heart } from "lucide-react";
+import { ShoppingCart, Heart, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
 import { useFavorites } from "@/context/FavoritesContext";
@@ -17,6 +17,8 @@ export interface Product {
     image: string;
     isNew?: boolean;
     category?: string;
+    ratingAverage?: number;
+    ratingCount?: number;
 }
 
 interface ProductCardProps {
@@ -85,10 +87,10 @@ export function ProductCard({ product }: ProductCardProps) {
                     <Heart className={`h-5 w-5 transition-colors ${isFav ? "text-danger fill-danger" : "text-white hover:text-danger"}`} />
                 </button>
 
-                {/* Quick Add Overlay */}
+                {/* Quick View Overlay - Redirects to product page for size selection */}
                 <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 z-10 bg-gradient-to-t from-black/90 to-transparent">
-                    <Button variant="neon" size="sm" className="w-full" onClick={handleAddToCart}>
-                        <ShoppingCart className="w-4 h-4 mr-2" /> Add to Cart
+                    <Button variant="neon" size="sm" className="w-full">
+                        <ShoppingCart className="w-4 h-4 mr-2" /> Pilih Ukuran
                     </Button>
                 </div>
             </div>
@@ -97,6 +99,21 @@ export function ProductCard({ product }: ProductCardProps) {
             <div className="mt-3">
                 <p className="text-text-secondary text-xs uppercase tracking-wider font-bold mb-1">{product.brand}</p>
                 <h3 className="text-white font-heading text-sm sm:text-base md:text-lg leading-tight group-hover:text-accent transition-colors line-clamp-2 min-h-[2.5rem] sm:min-h-[3rem]">{product.name}</h3>
+
+                {product.ratingCount !== undefined && product.ratingCount > 0 && (
+                    <div className="flex items-center gap-1.5 mt-1">
+                        <div className="flex">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                                <Star
+                                    key={star}
+                                    className={`h-3 w-3 ${(product.ratingAverage || 0) >= star ? "text-yellow-400 fill-yellow-400" : "text-white/10"}`}
+                                />
+                            ))}
+                        </div>
+                        <span className="text-[10px] text-text-secondary">({product.ratingCount})</span>
+                    </div>
+                )}
+
                 <div className="flex flex-wrap items-center gap-2 mt-2 font-numeric text-sm sm:text-lg">
                     <span className="text-white font-bold">Rp {product.price.toLocaleString('id-ID')}</span>
                     {product.originalPrice && (

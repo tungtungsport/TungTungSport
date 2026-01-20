@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/context/CartContext";
 import { useUser } from "@/context/UserContext";
-import { ShoppingBag, Truck, CheckCircle, ArrowLeft, Banknote, Loader2 } from "lucide-react";
+import { ShoppingBag, Truck, CheckCircle, ArrowLeft, Banknote, Loader2, CreditCard, Package } from "lucide-react";
 import NextImage from "next/image";
 import Link from "next/link";
 import { useState, useEffect, Suspense } from "react";
 import { supabase } from "@/lib/supabase";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { BCAPaymentInfo } from "@/components/payment/BCAPaymentInfo";
+import { PaymentProofUpload } from "@/components/payment/PaymentProofUpload";
 
 interface CheckoutItem {
     id: string;
@@ -22,18 +24,42 @@ interface CheckoutItem {
     size?: string;
 }
 
+type PaymentMethod = 'COD' | 'BCA_TRANSFER';
+
 function CheckoutContent() {
     const searchParams = useSearchParams();
-    const { items: cartItems, total: cartTotal, clearCart } = useCart();
+    const router = useRouter();
+    const { items: cartItems, clearCart } = useCart();
     const { profile } = useUser();
     const [isComplete, setIsComplete] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
+    const [bcaVirtualAccount, setBcaVirtualAccount] = useState<string>("");
+    const [estimatedDeliveryHours, setEstimatedDeliveryHours] = useState<number | null>(null);
 
-    // Determine if this is a direct checkout
+    // Payment method state
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('COD');
+    const [showPaymentProof, setShowPaymentProof] = useState(false);
+
+    // Shipping method state
+    type ShippingMethod = 'TOKO' | 'JNE' | 'JNT' | 'SICEPAT';
+    const [shippingMethod, setShippingMethod] = useState<ShippingMethod>('TOKO');
+
+    const shippingOptions = [
+        { id: 'TOKO' as ShippingMethod, name: 'Pengiriman Toko', price: 15000, estimate: '2-8 jam' },
+        { id: 'JNE' as ShippingMethod, name: 'JNE Regular', price: 20000, estimate: '1-3 hari' },
+        { id: 'JNT' as ShippingMethod, name: 'J&T Express', price: 18000, estimate: '1-3 hari' },
+        { id: 'SICEPAT' as ShippingMethod, name: 'SiCepat REG', price: 17000, estimate: '1-4 hari' },
+    ];
+
+    const selectedShipping = shippingOptions.find(s => s.id === shippingMethod) || shippingOptions[0];
+
+    // Determine checkout type
     const isDirect = searchParams.get('direct') === 'true';
+    const selectedParam = searchParams.get('selected');
 
-    // Get items to checkout (either direct product or cart items)
+    // Get items to checkout (direct product, selected cart items, or all cart items)
     const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[]>([]);
 
     useEffect(() => {
@@ -50,11 +76,23 @@ function CheckoutContent() {
             if (directItem.id) {
                 setCheckoutItems([directItem]);
             }
+        } else if (selectedParam) {
+            // Selected items from cart
+            try {
+                const selectedKeys = JSON.parse(decodeURIComponent(selectedParam)) as Array<{ id: string, size?: string }>;
+                const selectedItems = cartItems.filter(item =>
+                    selectedKeys.some(key => key.id === item.id && key.size === item.size)
+                );
+                setCheckoutItems(selectedItems);
+            } catch (e) {
+                console.error('Failed to parse selected items:', e);
+                setCheckoutItems(cartItems);
+            }
         } else {
-            // Cart checkout - use cart items
+            // Cart checkout - use all cart items
             setCheckoutItems(cartItems);
         }
-    }, [isDirect, searchParams, cartItems]);
+    }, [isDirect, selectedParam, searchParams, cartItems]);
 
     const total = checkoutItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
@@ -71,6 +109,19 @@ function CheckoutContent() {
             setAddress(profile.address || "");
         }
     }, [profile]);
+
+    const formatETA = (hours: number) => {
+        const arrivalDate = new Date();
+        arrivalDate.setHours(arrivalDate.getHours() + hours);
+
+        return arrivalDate.toLocaleDateString('id-ID', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
 
     const handleCompletePurchase = async () => {
         if (!profile) {
@@ -92,10 +143,10 @@ function CheckoutContent() {
         setError(null);
 
         try {
-            const shippingCost = 25000;
+            const shippingCost = selectedShipping.price;
             const finalTotal = total + shippingCost;
 
-            // Prepare items for RPC (clean object)
+            // Prepare items for database
             const orderItems = checkoutItems.map(item => ({
                 product_id: item.id,
                 product_name: item.name,
@@ -103,26 +154,81 @@ function CheckoutContent() {
                 quantity: item.quantity,
                 unit_price: item.price,
                 total_price: item.price * item.quantity,
-                size: item.size
+                size: item.size || null
             }));
 
-            // Call Atomic RPC
-            const { data: orderId, error: rpcError } = await supabase.rpc('create_order_atomic', {
-                p_customer_id: profile.id,
-                p_subtotal: total,
-                p_shipping_cost: shippingCost,
-                p_total: finalTotal,
-                p_shipping_address: `${name} | ${phone} | ${address}`,
-                p_items: orderItems
+            console.log("Creating order with data:", {
+                customer_id: profile.id,
+                payment_method: paymentMethod,
+                courier: selectedShipping.name,
+                subtotal: total,
+                shipping_cost: shippingCost,
+                total: finalTotal
             });
 
-            if (rpcError) throw rpcError;
+            // Create order with payment method - let database set default status
+            const orderData = {
+                customer_id: profile.id,
+                payment_method: paymentMethod,
+                courier: selectedShipping.name,
+                subtotal: total,
+                shipping_cost: shippingCost,
+                total: finalTotal,
+                shipping_address: `${name} | ${phone} | ${address}`
+            };
 
-            // Clear cart only if this was a cart checkout
-            if (!isDirect) {
-                clearCart();
+            console.log("Inserting order...");
+            const { data: newOrder, error: orderError } = await supabase
+                .from('orders')
+                .insert(orderData)
+                .select()
+                .single();
+
+            console.log("Order insert result:", { newOrder, orderError });
+
+            if (orderError) {
+                console.error("Order creation error:", orderError);
+                throw new Error(orderError.message || JSON.stringify(orderError));
             }
-            setIsComplete(true);
+
+            // Insert order items
+            const orderItemsWithOrderId = orderItems.map(item => ({
+                ...item,
+                order_id: newOrder.id
+            }));
+
+            const { error: itemsError } = await supabase
+                .from('order_items')
+                .insert(orderItemsWithOrderId);
+
+            if (itemsError) {
+                console.error("Order items error:", itemsError);
+                throw new Error(itemsError.message || JSON.stringify(itemsError));
+            }
+
+            // Remove purchased items from cart
+            if (!isDirect) {
+                // Remove only the items that were checked out
+                for (const item of checkoutItems) {
+                    await supabase
+                        .from('cart_items')
+                        .delete()
+                        .eq('user_id', profile.id)
+                        .eq('product_id', item.id);
+                }
+            }
+
+            setCreatedOrderId(newOrder.id);
+            setBcaVirtualAccount(newOrder.bca_virtual_account || "");
+            setEstimatedDeliveryHours(newOrder.estimated_delivery_hours || null);
+
+            // If BCA payment, show payment proof upload
+            if (paymentMethod === 'BCA_TRANSFER') {
+                setShowPaymentProof(true);
+            } else {
+                // COD - show success immediately
+                setIsComplete(true);
+            }
         } catch (err: any) {
             console.error("Checkout error:", err);
             setError("Gagal membuat pesanan: " + (err.message || "Unknown error"));
@@ -131,17 +237,67 @@ function CheckoutContent() {
         }
     };
 
+    const handleUploadSuccess = () => {
+        setIsComplete(true);
+    };
+
     if (isComplete) {
         return (
             <div className="container mx-auto px-4 py-16 flex flex-col items-center justify-center text-center min-h-[60vh]">
                 <CheckCircle className="h-20 w-20 text-success mb-6" />
                 <h1 className="font-heading text-4xl md:text-5xl text-white uppercase italic mb-4">Pesanan Berhasil!</h1>
-                <p className="text-text-secondary text-lg mb-8 max-w-md">
-                    Terima kasih atas pesanan Anda. Pesanan akan segera diproses!
+                <p className="text-text-secondary text-lg mb-4 max-w-md">
+                    {paymentMethod === 'BCA_TRANSFER'
+                        ? "Terima kasih! Bukti pembayaran Anda sudah diterima. Admin akan memverifikasi dalam 1x24 jam."
+                        : "Terima kasih atas pesanan Anda. Pesanan akan segera diproses!"
+                    }
                 </p>
-                <Link href="/products">
-                    <Button variant="neon" size="lg">Lanjut Belanja</Button>
+
+                {estimatedDeliveryHours && (
+                    <div className="bg-accent/10 border border-accent/20 rounded-lg p-4 mb-8 max-w-sm w-full">
+                        <p className="text-accent text-xs uppercase font-bold mb-1 flex items-center justify-center gap-2">
+                            <Truck className="h-4 w-4" /> Estimasi Kedatangan
+                        </p>
+                        <p className="text-white font-bold">{formatETA(estimatedDeliveryHours)}</p>
+                        <p className="text-text-secondary text-[10px] mt-1 italic">Waktu dapat berubah sesuai kondisi kurir di lapangan</p>
+                    </div>
+                )}
+                <div className="flex gap-4">
+                    <Link href="/orders">
+                        <Button variant="outline" size="lg">Lihat Pesanan</Button>
+                    </Link>
+                    <Link href="/products">
+                        <Button variant="neon" size="lg">Lanjut Belanja</Button>
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    // Show payment proof upload after order created with BCA
+    if (showPaymentProof && createdOrderId && bcaVirtualAccount) {
+        return (
+            <div className="container mx-auto px-4 py-8">
+                <Link href="/products" className="inline-flex items-center text-text-secondary hover:text-white mb-6 transition-colors">
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Kembali ke Produk
                 </Link>
+
+                <h1 className="font-heading text-3xl md:text-4xl text-white uppercase italic mb-2">Transfer BCA</h1>
+                <p className="text-text-secondary mb-8">Selesaikan pembayaran dan upload bukti transfer</p>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <BCAPaymentInfo
+                        virtualAccount={bcaVirtualAccount}
+                        amount={total + 25000}
+                        orderId={createdOrderId}
+                    />
+                    <PaymentProofUpload
+                        orderId={createdOrderId}
+                        bcaVirtualAccount={bcaVirtualAccount}
+                        amount={total + 25000}
+                        onUploadSuccess={handleUploadSuccess}
+                    />
+                </div>
             </div>
         );
     }
@@ -193,16 +349,94 @@ function CheckoutContent() {
                         </div>
                     </div>
 
-                    {/* Payment Method - COD Only */}
+                    {/* Shipping Method Selection */}
+                    <div className="bg-white/5 border border-white/10 p-6 rounded-lg">
+                        <h2 className="font-heading text-xl text-white uppercase flex items-center gap-2 mb-6">
+                            <Package className="h-5 w-5 text-accent" /> Metode Pengiriman
+                        </h2>
+                        <div className="space-y-3">
+                            {shippingOptions.map((option) => (
+                                <div
+                                    key={option.id}
+                                    className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-all ${shippingMethod === option.id
+                                        ? 'border-accent bg-accent/10'
+                                        : 'border-white/20 bg-white/5 hover:border-white/30'
+                                        }`}
+                                    onClick={() => setShippingMethod(option.id)}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="radio"
+                                            name="shipping"
+                                            checked={shippingMethod === option.id}
+                                            onChange={() => setShippingMethod(option.id)}
+                                            className="accent-accent w-4 h-4"
+                                        />
+                                        <div>
+                                            <span className="text-white font-bold">{option.name}</span>
+                                            <p className="text-text-secondary text-xs mt-0.5">Estimasi {option.estimate}</p>
+                                        </div>
+                                    </div>
+                                    <span className="text-accent font-numeric font-bold">
+                                        Rp {option.price.toLocaleString("id-ID")}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Payment Method Selection */}
                     <div className="bg-white/5 border border-white/10 p-6 rounded-lg">
                         <h2 className="font-heading text-xl text-white uppercase flex items-center gap-2 mb-6">
                             <Banknote className="h-5 w-5 text-accent" /> Metode Pembayaran
                         </h2>
-                        <div className="flex items-center gap-3 p-4 border border-accent rounded bg-accent/10">
-                            <input type="radio" name="payment" defaultChecked className="accent-accent w-4 h-4" readOnly />
-                            <span className="text-white font-bold">Cash on Delivery (COD)</span>
+                        <div className="space-y-3">
+                            {/* COD Option */}
+                            <div
+                                className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-all ${paymentMethod === 'COD'
+                                    ? 'border-accent bg-accent/10'
+                                    : 'border-white/20 bg-white/5 hover:border-white/30'
+                                    }`}
+                                onClick={() => setPaymentMethod('COD')}
+                            >
+                                <input
+                                    type="radio"
+                                    name="payment"
+                                    checked={paymentMethod === 'COD'}
+                                    onChange={() => setPaymentMethod('COD')}
+                                    className="accent-accent w-4 h-4"
+                                />
+                                <CreditCard className="h-5 w-5 text-white" />
+                                <div className="flex-1">
+                                    <span className="text-white font-bold">Cash on Delivery (COD)</span>
+                                    <p className="text-text-secondary text-xs mt-1">Bayar langsung saat pesanan tiba</p>
+                                </div>
+                            </div>
+
+                            {/* BCA Transfer Option */}
+                            <div
+                                className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-all ${paymentMethod === 'BCA_TRANSFER'
+                                    ? 'border-blue-500 bg-blue-500/10'
+                                    : 'border-white/20 bg-white/5 hover:border-white/30'
+                                    }`}
+                                onClick={() => setPaymentMethod('BCA_TRANSFER')}
+                            >
+                                <input
+                                    type="radio"
+                                    name="payment"
+                                    checked={paymentMethod === 'BCA_TRANSFER'}
+                                    onChange={() => setPaymentMethod('BCA_TRANSFER')}
+                                    className="accent-blue-500 w-4 h-4"
+                                />
+                                <div className="h-8 w-12 bg-blue-600 rounded flex items-center justify-center">
+                                    <span className="text-white font-bold text-xs">BCA</span>
+                                </div>
+                                <div className="flex-1">
+                                    <span className="text-white font-bold">Transfer Bank BCA</span>
+                                    <p className="text-text-secondary text-xs mt-1">Bayar dengan transfer ke Virtual Account BCA</p>
+                                </div>
+                            </div>
                         </div>
-                        <p className="text-text-secondary text-sm mt-3">Bayar langsung saat pesanan tiba di alamat Anda.</p>
                     </div>
                 </div>
 
@@ -236,12 +470,12 @@ function CheckoutContent() {
                             <span className="font-numeric">Rp {total.toLocaleString("id-ID")}</span>
                         </div>
                         <div className="flex justify-between text-text-secondary text-sm">
-                            <span>Ongkir</span>
-                            <span className="font-numeric">Rp 25,000</span>
+                            <span>Ongkir ({selectedShipping.name})</span>
+                            <span className="font-numeric">Rp {selectedShipping.price.toLocaleString("id-ID")}</span>
                         </div>
                         <div className="flex justify-between text-white text-lg font-bold pt-2 border-t border-white/10">
                             <span className="font-heading uppercase">Total</span>
-                            <span className="font-numeric">Rp {(total + 25000).toLocaleString("id-ID")}</span>
+                            <span className="font-numeric">Rp {(total + selectedShipping.price).toLocaleString("id-ID")}</span>
                         </div>
                     </div>
 
@@ -264,9 +498,15 @@ function CheckoutContent() {
                                 Memproses...
                             </>
                         ) : (
-                            "Pesan Sekarang"
+                            paymentMethod === 'COD' ? "Pesan Sekarang" : "Lanjut ke Pembayaran"
                         )}
                     </Button>
+
+                    {paymentMethod === 'BCA_TRANSFER' && (
+                        <p className="text-text-secondary text-xs text-center mt-3">
+                            Anda akan diarahkan ke halaman pembayaran BCA
+                        </p>
+                    )}
                 </div>
             </div>
         </div>

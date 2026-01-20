@@ -13,6 +13,8 @@ export interface DBProduct {
     video_url: string | null;
     is_new: boolean;
     favorite_count: number;
+    rating_average?: number;
+    rating_count?: number;
 }
 
 export interface DisplayProduct {
@@ -24,6 +26,8 @@ export interface DisplayProduct {
     image: string;
     isNew?: boolean;
     category?: string;
+    ratingAverage: number;
+    ratingCount: number;
 }
 
 // Transform database product to display format
@@ -36,7 +40,9 @@ export function toDisplayProduct(product: DBProduct): DisplayProduct {
         originalPrice: product.original_price || undefined,
         image: product.images?.[0] || '/products/default.png',
         isNew: product.is_new || false,
-        category: product.category || undefined
+        category: product.category || undefined,
+        ratingAverage: product.rating_average || 0,
+        ratingCount: product.rating_count || 0
     };
 }
 

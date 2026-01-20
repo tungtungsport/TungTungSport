@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { ShoppingCart, Menu, User, Heart, X, LogIn } from "lucide-react";
+import { ShoppingCart, Menu, User, Heart, X, LogIn, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useCart } from "@/context/CartContext";
@@ -113,36 +113,84 @@ export function Navbar() {
                 </div>
             </div>
 
-            {/* Mobile Nav */}
-            {isMobileMenuOpen && (
-                <div className="md:hidden border-t border-primary/20 bg-dark p-4">
-                    <nav className="flex flex-col space-y-4">
+            {/* Mobile Nav - Slide-in Drawer */}
+            <div className={cn(
+                "fixed inset-0 z-50 md:hidden transition-all duration-300",
+                isMobileMenuOpen ? "visible" : "invisible"
+            )}>
+                {/* Backdrop */}
+                <div
+                    className={cn(
+                        "absolute inset-0 bg-dark/80 backdrop-blur-sm transition-opacity duration-300",
+                        isMobileMenuOpen ? "opacity-100" : "opacity-0"
+                    )}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                />
+
+                {/* Menu Content */}
+                <div className={cn(
+                    "absolute top-0 right-0 h-full w-[280px] bg-dark border-l border-primary/20 p-6 flex flex-col transition-transform duration-300 ease-out",
+                    isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
+                )}>
+                    <div className="flex justify-between items-center mb-10">
+                        <span className="font-heading font-bold text-accent italic">MENU</span>
+                        <button onClick={() => setIsMobileMenuOpen(false)} className="text-white p-1 hover:text-accent transition-colors">
+                            <X className="h-7 w-7" />
+                        </button>
+                    </div>
+
+                    <nav className="flex flex-col space-y-6">
                         {navItems.map((item) => (
                             <Link
                                 key={item.href}
                                 href={item.href}
                                 onClick={() => setIsMobileMenuOpen(false)}
                                 className={cn(
-                                    "font-heading font-bold uppercase text-lg",
-                                    pathname === item.href ? "text-accent" : "text-text-secondary"
+                                    "font-heading font-bold uppercase text-2xl transition-all hover:pl-2",
+                                    pathname === item.href ? "text-accent" : "text-white"
                                 )}
                             >
                                 {item.name}
                             </Link>
                         ))}
-                        <hr className="border-primary/20" />
+                    </nav>
+
+                    <div className="mt-auto space-y-4 pt-6 border-t border-primary/20">
                         {isLoggedIn ? (
-                            <Link href="/profile" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center text-text-secondary font-heading font-bold uppercase">
-                                <User className="h-5 w-5 mr-3" /> Profile
-                            </Link>
+                            <div className="space-y-4">
+                                <Link
+                                    href="/profile"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className="flex items-center text-text-secondary font-heading font-bold uppercase hover:text-white transition-colors"
+                                >
+                                    <User className="h-5 w-5 mr-3 text-accent" /> Profile
+                                </Link>
+                                <Link
+                                    href="/orders"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className="flex items-center text-text-secondary font-heading font-bold uppercase hover:text-white transition-colors"
+                                >
+                                    <ShoppingCart className="h-5 w-5 mr-3 text-accent" /> Pesanan Saya
+                                </Link>
+                                <Link
+                                    href="/returns/my-returns"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className="flex items-center text-text-secondary font-heading font-bold uppercase hover:text-white transition-colors"
+                                >
+                                    <RotateCcw className="h-5 w-5 mr-3 text-accent" /> Status Pengembalian
+                                </Link>
+                            </div>
                         ) : (
-                            <Link href="/login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center text-accent font-heading font-bold uppercase">
-                                <LogIn className="h-5 w-5 mr-3" /> Masuk
+                            <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                                <Button variant="neon" className="w-full h-12 gap-2 text-base font-bold uppercase italic">
+                                    <LogIn className="h-5 w-5" />
+                                    <span>Masuk Sekarang</span>
+                                </Button>
                             </Link>
                         )}
-                    </nav>
+                    </div>
                 </div>
-            )}
+            </div>
         </header>
     );
 }

@@ -23,10 +23,12 @@ export default function AboutPage() {
             <section className="py-20">
                 <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
                     <div className="order-2 md:order-1 relative aspect-video bg-gray-800 rounded-sm overflow-hidden border border-primary/20">
-                        {/* Image Placeholder */}
-                        <div className="absolute inset-0 flex items-center justify-center text-text-secondary font-heading uppercase tracking-widest">
-                            Team Photo Mockup
-                        </div>
+                        {/* Team Photo */}
+                        <img
+                            src="/images/team-photo.png"
+                            alt="Tim Tung Tung Sport"
+                            className="w-full h-full object-cover"
+                        />
                     </div>
                     <div className="order-1 md:order-2">
                         <span className="text-accent font-bold uppercase tracking-widest text-sm mb-2 block">Our Story</span>
