@@ -52,11 +52,6 @@ export default function Home() {
                   Shop Products <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <Link href="/contact">
-                <Button variant="outline" size="lg" className="text-lg px-10 w-full sm:w-auto border-white text-white hover:bg-white hover:text-dark hover:border-white">
-                  Contact Us
-                </Button>
-              </Link>
             </div>
           </div>
         </div>
