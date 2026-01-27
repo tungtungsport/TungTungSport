@@ -63,14 +63,12 @@ export function FavoritesDrawer() {
                                     </Link>
                                     <p className="text-white font-numeric font-bold mt-1">Rp {item.price.toLocaleString("id-ID")}</p>
                                 </div>
-                                <div className="flex flex-col items-end justify-between gap-2">
+                                <div className="flex flex-col items-end justify-start">
                                     <button onClick={() => removeItem(item.id)} className="text-danger hover:text-danger/80">
                                         <X className="h-4 w-4" />
                                     </button>
-                                    <Button variant="neon" size="sm" onClick={() => handleAddToCart(item)}>
-                                        <ShoppingCart className="h-4 w-4" />
-                                    </Button>
                                 </div>
+
                             </div>
                         ))
                     )}

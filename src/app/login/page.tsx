@@ -56,7 +56,7 @@ export default function LoginPage() {
                             <LogIn className="h-10 w-10 text-accent" />
                         </div>
                         <h1 className="font-heading text-3xl md:text-4xl text-white uppercase italic">Masuk</h1>
-                        <p className="text-text-secondary mt-2">Selamat datang kembali!</p>
+                        <p className="text-text-secondary mt-2">Silahkan login</p>
                     </div>
 
                     <form onSubmit={handleLogin} className="bg-white/5 border border-white/10 p-6 rounded-lg space-y-4">

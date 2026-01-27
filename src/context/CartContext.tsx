@@ -126,50 +126,75 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const existing = items.find((item) => item.id === product.id && item.size === size);
 
         if (isLoggedIn && user) {
-            if (existing) {
-                // Update quantity in Supabase
-                // We need to identify the specific row. Since Supabase doesn't support composite key update easily via .update().eq().eq(), 
-                // we'll rely on user_id + product_id + size uniqueness or just use Rpc/raw query if strict, but simple update works if we assume constraint.
-                // Actually constraint is likely (user_id, product_id, size - if nullable, careful).
-                // Ideally we'd have a unique constraint. For now, let's try strict matching.
+            try {
+                if (existing) {
+                    // Update quantity in Supabase
+                    let query = supabase
+                        .from('cart_items')
+                        .update({ quantity: existing.quantity + 1 })
+                        .eq('user_id', user.id)
+                        .eq('product_id', product.id);
 
-                let query = supabase
-                    .from('cart_items')
-                    .update({ quantity: existing.quantity + 1 })
-                    .eq('user_id', user.id)
-                    .eq('product_id', product.id);
+                    if (size) {
+                        query = query.eq('size', size);
+                    } else {
+                        query = query.is('size', null);
+                    }
 
-                if (size) {
-                    query = query.eq('size', size);
+                    const { error } = await query;
+                    if (error) {
+                        console.error('Error updating cart item:', error);
+                        return;
+                    }
                 } else {
-                    query = query.is('size', null);
+                    // Insert new item
+                    const { error } = await supabase
+                        .from('cart_items')
+                        .insert({
+                            user_id: user.id,
+                            product_id: product.id,
+                            quantity: 1,
+                            size: size || null
+                        });
+
+                    if (error) {
+                        console.error('Error adding to cart:', error);
+                        // If conflict, try to update instead
+                        if (error.code === '23505') {
+                            console.log('Item exists, updating quantity instead');
+                            const { error: updateError } = await supabase
+                                .from('cart_items')
+                                .update({ quantity: 1 })
+                                .eq('user_id', user.id)
+                                .eq('product_id', product.id);
+                            if (updateError) {
+                                console.error('Error updating existing item:', updateError);
+                                return;
+                            }
+                        } else {
+                            return;
+                        }
+                    }
                 }
 
-                await query;
-            } else {
-                // Insert new item
-                await supabase
-                    .from('cart_items')
-                    .insert({
-                        user_id: user.id,
-                        product_id: product.id,
-                        quantity: 1,
-                        size: size || null
-                    });
+                // Refetch cart to ensure sync
+                await fetchCart();
+            } catch (err) {
+                console.error('Cart operation failed:', err);
             }
+        } else {
+            // Update local state for guests
+            setItems((prev) => {
+                if (existing) {
+                    return prev.map((item) =>
+                        (item.id === product.id && item.size === size)
+                            ? { ...item, quantity: item.quantity + 1 }
+                            : item
+                    );
+                }
+                return [...prev, { ...product, quantity: 1, size }];
+            });
         }
-
-        // Update local state
-        setItems((prev) => {
-            if (existing) {
-                return prev.map((item) =>
-                    (item.id === product.id && item.size === size)
-                        ? { ...item, quantity: item.quantity + 1 }
-                        : item
-                );
-            }
-            return [...prev, { ...product, quantity: 1, size }];
-        });
     };
 
     const removeItem = async (productId: string, size?: string) => {

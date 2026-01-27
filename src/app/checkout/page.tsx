@@ -166,10 +166,11 @@ function CheckoutContent() {
                 total: finalTotal
             });
 
-            // Create order with payment method - let database set default status
+            // Create order with payment method - set status to MENUNGGU_KONFIRMASI for all orders
             const orderData = {
                 customer_id: profile.id,
                 payment_method: paymentMethod,
+                status: 'MENUNGGU_KONFIRMASI',
                 courier: selectedShipping.name,
                 subtotal: total,
                 shipping_cost: shippingCost,

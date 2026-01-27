@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { UserPlus, ArrowLeft, Loader2, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function SignupPage() {
     const router = useRouter();
@@ -16,6 +16,7 @@ export default function SignupPage() {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [phone, setPhone] = useState("");
+    const [address, setAddress] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -23,11 +24,12 @@ export default function SignupPage() {
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
-    // Redirect if already logged in
-    if (isLoggedIn) {
-        router.push("/");
-        return null;
-    }
+    // Redirect if already logged in - use useEffect to avoid setState during render
+    useEffect(() => {
+        if (isLoggedIn) {
+            router.push("/");
+        }
+    }, [isLoggedIn, router]);
 
     const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -46,13 +48,13 @@ export default function SignupPage() {
             return;
         }
 
-        const { error } = await signUp(email, password, name, phone);
+        const { error } = await signUp(email, password, name, phone, address);
 
         if (error) {
             setError(error.message);
             setIsLoading(false);
         } else {
-            // Redirect to profile page so user can fill their address
+            // Redirect to profile page so user can verify their info
             router.push("/profile");
         }
     };
@@ -113,6 +115,17 @@ export default function SignupPage() {
                                 disabled={isLoading}
                                 maxLength={15}
                             />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-white text-sm font-bold uppercase">Alamat Pengiriman</label>
+                            <Input
+                                type="text"
+                                value={address}
+                                onChange={(e) => setAddress(e.target.value)}
+                                placeholder="Jl. Contoh No. 123, Kota, Provinsi"
+                                disabled={isLoading}
+                            />
+                            <p className="text-text-secondary text-xs">Alamat dapat diubah nanti di halaman profil</p>
                         </div>
                         <div className="space-y-2">
                             <label className="text-white text-sm font-bold uppercase">Password</label>
