@@ -5,14 +5,16 @@ import { supabase } from "@/lib/supabase";
 import { Star, MessageSquare, Loader2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Fixed: Added optional chaining for profiles to handle null values
+
 interface Rating {
     id: string;
     rating: number;
     review_text: string;
     created_at: string;
-    profiles: {
+    profiles?: {
         name: string;
-    };
+    } | null;
 }
 
 export function ProductRatingsList({ productId }: { productId: string }) {
@@ -79,7 +81,7 @@ export function ProductRatingsList({ productId }: { productId: string }) {
                                         <User className="h-5 w-5 text-accent" />
                                     </div>
                                     <div>
-                                        <p className="text-white font-bold text-sm">{rating.profiles.name || "Anonymous"}</p>
+                                        <p className="text-white font-bold text-sm">{rating.profiles?.name || "Anonymous"}</p>
                                         <p className="text-[#BFD3C6] text-[10px] uppercase">{new Date(rating.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                                     </div>
                                 </div>

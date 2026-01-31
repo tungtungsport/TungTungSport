@@ -63,7 +63,7 @@ export function CartDrawer() {
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-primary/20">
                     <h2 className="font-heading text-xl uppercase text-white flex items-center gap-2">
-                        <ShoppingBag className="h-5 w-5 text-accent" /> Your Cart
+                        <ShoppingBag className="h-5 w-5 text-accent" /> Keranjang Anda
                         <span className="text-accent">({itemCount})</span>
                     </h2>
                     <button onClick={closeCart} className="text-text-secondary hover:text-white transition-colors">
@@ -99,9 +99,9 @@ export function CartDrawer() {
                     {items.length === 0 ? (
                         <div className="text-center py-12">
                             <ShoppingBag className="h-16 w-16 mx-auto text-primary/50 mb-4" />
-                            <p className="text-text-secondary">Your cart is empty</p>
+                            <p className="text-text-secondary">Keranjang Anda kosong</p>
                             <Button variant="outline" className="mt-4" onClick={closeCart}>
-                                Continue Shopping
+                                Lanjut Belanja
                             </Button>
                         </div>
                     ) : (
@@ -175,7 +175,7 @@ export function CartDrawer() {
                                                         onClick={() => setEditingSize(itemKey)}
                                                         className="inline-block bg-white/10 hover:bg-accent/20 px-2 py-0.5 rounded text-[10px] font-bold text-white hover:text-accent transition-colors"
                                                     >
-                                                        SIZE: {item.size} ▼
+                                                        UKURAN: {item.size} ▼
                                                     </button>
                                                 )}
                                             </div>

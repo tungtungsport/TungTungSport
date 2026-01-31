@@ -77,7 +77,7 @@ export default function LoginPage() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-white text-sm font-bold uppercase">Password</label>
+                            <label className="text-white text-sm font-bold uppercase">Kata Sandi</label>
                             <div className="relative">
                                 <Input
                                     type={showPassword ? "text" : "password"}

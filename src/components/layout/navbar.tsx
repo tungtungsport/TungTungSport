@@ -11,9 +11,9 @@ import { useFavorites } from "@/context/FavoritesContext";
 import { useAuth } from "@/context/AuthContext";
 
 const navItems = [
-    { name: "Home", href: "/" },
-    { name: "Products", href: "/products" },
-    { name: "About", href: "/about" },
+    { name: "Beranda", href: "/" },
+    { name: "Produk", href: "/products" },
+    { name: "Tentang", href: "/about" },
 ];
 
 export function Navbar() {
@@ -72,7 +72,7 @@ export function Navbar() {
                 <div className="flex items-center space-x-2 md:space-x-4">
                     {/* Favorites Button */}
                     <Button variant="ghost" size="icon" className="relative" onClick={handleFavoritesClick}>
-                        <Heart className="h-5 w-5" />
+                        <Heart className="h-5 w-5" data-favorites-icon />
                         {favCount > 0 && isLoggedIn && (
                             <span className="absolute -top-1 -right-1 h-4 w-4 bg-danger text-white text-[10px] font-bold flex items-center justify-center rounded-full">{favCount}</span>
                         )}
@@ -80,7 +80,7 @@ export function Navbar() {
 
                     {/* Cart Button */}
                     <Button variant="ghost" size="icon" className="relative" onClick={handleCartClick}>
-                        <ShoppingCart className="h-5 w-5" />
+                        <ShoppingCart className="h-5 w-5" data-cart-icon />
                         {cartCount > 0 && isLoggedIn && (
                             <span className="absolute -top-1 -right-1 h-4 w-4 bg-accent text-dark text-[10px] font-bold flex items-center justify-center rounded-full">{cartCount}</span>
                         )}
@@ -91,7 +91,7 @@ export function Navbar() {
                         <Link href="/profile" className="hidden md:block">
                             <Button variant="outline" size="sm" className="gap-2">
                                 <User className="h-4 w-4 mb-0.5" />
-                                <span>Account</span>
+                                <span>Akun</span>
                             </Button>
                         </Link>
                     ) : (
@@ -128,10 +128,13 @@ export function Navbar() {
                 />
 
                 {/* Menu Content */}
-                <div className={cn(
-                    "absolute top-0 right-0 h-full w-[280px] bg-dark border-l border-primary/20 p-6 flex flex-col transition-transform duration-300 ease-out",
-                    isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
-                )}>
+                <div
+                    className={cn(
+                        "absolute top-0 right-0 h-full w-[280px] z-[999] border-l-2 border-accent p-6 flex flex-col transition-transform duration-300 ease-out shadow-2xl",
+                        isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
+                    )}
+                    style={{ backgroundColor: '#0B1F16' }}
+                >
                     <div className="flex justify-between items-center mb-10">
                         <span className="font-heading font-bold text-accent italic">MENU</span>
                         <button onClick={() => setIsMobileMenuOpen(false)} className="text-white p-1 hover:text-accent transition-colors">
@@ -139,15 +142,17 @@ export function Navbar() {
                         </button>
                     </div>
 
-                    <nav className="flex flex-col space-y-6">
+                    <nav className="flex flex-col space-y-4">
                         {navItems.map((item) => (
                             <Link
                                 key={item.href}
                                 href={item.href}
                                 onClick={() => setIsMobileMenuOpen(false)}
                                 className={cn(
-                                    "font-heading font-bold uppercase text-2xl transition-all hover:pl-2",
-                                    pathname === item.href ? "text-accent" : "text-white"
+                                    "font-heading font-bold uppercase text-2xl transition-all duration-300 py-3 rounded-lg",
+                                    pathname === item.href
+                                        ? "text-accent bg-accent/10 pl-6 border-l-4 border-accent"
+                                        : "text-white hover:text-accent hover:bg-accent/10 pl-4 hover:pl-6"
                                 )}
                             >
                                 {item.name}
@@ -155,31 +160,31 @@ export function Navbar() {
                         ))}
                     </nav>
 
-                    <div className="mt-auto space-y-4 pt-6 border-t border-primary/20">
+                    <div className="mt-auto space-y-3 pt-6 border-t border-accent/30">
                         {isLoggedIn ? (
-                            <div className="space-y-4">
+                            <>
                                 <Link
                                     href="/profile"
                                     onClick={() => setIsMobileMenuOpen(false)}
-                                    className="flex items-center text-text-secondary font-heading font-bold uppercase hover:text-white transition-colors"
+                                    className="flex items-center text-text-secondary font-heading font-bold uppercase transition-all duration-300 py-2 px-3 rounded-lg hover:text-accent hover:bg-accent/10 hover:pl-5"
                                 >
-                                    <User className="h-5 w-5 mr-3 text-accent" /> Profile
+                                    <User className="h-5 w-5 mr-3 text-accent" /> Profil
                                 </Link>
                                 <Link
                                     href="/orders"
                                     onClick={() => setIsMobileMenuOpen(false)}
-                                    className="flex items-center text-text-secondary font-heading font-bold uppercase hover:text-white transition-colors"
+                                    className="flex items-center text-text-secondary font-heading font-bold uppercase transition-all duration-300 py-2 px-3 rounded-lg hover:text-accent hover:bg-accent/10 hover:pl-5"
                                 >
                                     <ShoppingCart className="h-5 w-5 mr-3 text-accent" /> Pesanan Saya
                                 </Link>
                                 <Link
                                     href="/returns/my-returns"
                                     onClick={() => setIsMobileMenuOpen(false)}
-                                    className="flex items-center text-text-secondary font-heading font-bold uppercase hover:text-white transition-colors"
+                                    className="flex items-center text-text-secondary font-heading font-bold uppercase transition-all duration-300 py-2 px-3 rounded-lg hover:text-accent hover:bg-accent/10 hover:pl-5"
                                 >
                                     <RotateCcw className="h-5 w-5 mr-3 text-accent" /> Status Pengembalian
                                 </Link>
-                            </div>
+                            </>
                         ) : (
                             <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
                                 <Button variant="neon" className="w-full h-12 gap-2 text-base font-bold uppercase italic">
@@ -191,6 +196,6 @@ export function Navbar() {
                     </div>
                 </div>
             </div>
-        </header>
+        </header >
     );
 }

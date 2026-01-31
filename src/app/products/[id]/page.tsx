@@ -2,12 +2,12 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { getProductById, toDisplayProduct } from "@/lib/products";
 import Image from "next/image";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import { ProductDetailActions } from "./ProductDetailActions";
 import { ProductRatingsList } from "@/components/products/ProductRatingsList";
 import { cn } from "@/lib/utils";
+import { BackButton } from "./BackButton";
 
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -24,9 +24,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             <Navbar />
 
             <div className="container mx-auto px-4 py-6 md:py-8">
-                <Link href="/products" className="inline-flex items-center text-text-secondary hover:text-white mb-4 md:mb-6 transition-colors text-sm md:text-base">
-                    <ArrowLeft className="mr-2 h-4 w-4" /> Back to Products
-                </Link>
+                <BackButton />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12">
                     {/* Product Image */}
