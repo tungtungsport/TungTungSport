@@ -9,6 +9,8 @@ import { ProductRatingsList } from "@/components/products/ProductRatingsList";
 import { cn } from "@/lib/utils";
 import { BackButton } from "./BackButton";
 
+export const revalidate = 0;
+
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
     const dbProduct = await getProductById(id);

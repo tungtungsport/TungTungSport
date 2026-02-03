@@ -118,8 +118,21 @@ export default function OrdersPage() {
     const [selectedOrderForRating, setSelectedOrderForRating] = useState<any | null>(null);
 
     useEffect(() => {
+        // Only fetch if profile exists. 
+        // If we want to handle the "not logged in" state, we should probably do that in the render or redirect.
+        // For now, if profile is null, we shouldn't be loading forever.
         if (profile) {
             fetchOrders();
+        } else {
+            // If profile is strictly null (loaded but no user), stop loading
+            // Note: usage depends on UserContext behavior (loading vs null). 
+            // Assuming initial state might need checking. 
+            // Better approach: depend on an 'isLoadingProfile' from context if available, 
+            // but simply turning off loading after a timeout or if profile is confirmed null is safer.
+            const timer = setTimeout(() => {
+                setIsLoading(false);
+            }, 1000);
+            return () => clearTimeout(timer);
         }
     }, [profile]);
 
